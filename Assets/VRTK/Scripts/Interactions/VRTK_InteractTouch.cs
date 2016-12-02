@@ -23,8 +23,11 @@ namespace VRTK
     public delegate void ObjectInteractEventHandler(object sender, ObjectInteractEventArgs e);
 
     /// <summary>
-    /// The Interact Touch script is attached to a Controller object within the `[CameraRig]` prefab.
+    /// The Interact Touch script is usually applied to a Controller and provides a collider to know when the controller is touching something.
     /// </summary>
+    /// <remarks>
+    /// By default, the HTC Vive Wand Controller will be utilised as the base for the colliders, however this can be override with custom colliders if required.
+    /// </remarks>
     /// <example>
     /// `VRTK/Examples/005_Controller/BasicObjectGrabbing` demonstrates the highlighting of objects that have the `VRTK_InteractableObject` script added to them to show the ability to highlight interactable objects when they are touched by the controllers.
     /// </example>
@@ -292,6 +295,7 @@ namespace VRTK
             {
                 touchedObject = colliderInteractableObject;
                 var touchedObjectScript = touchedObject.GetComponent<VRTK_InteractableObject>();
+                var touchingObject = gameObject;
 
                 //If this controller is not allowed to touch this interactable object then clean up touch and return before initiating a touch.
                 if (!touchedObjectScript.IsValidInteractableController(gameObject, touchedObjectScript.allowedTouchControllers))
@@ -305,7 +309,7 @@ namespace VRTK
                 touchedObjectScript.ToggleHighlight(true);
                 ToggleControllerVisibility(false);
                 CheckRumbleController(touchedObjectScript);
-                touchedObjectScript.StartTouching(gameObject);
+                touchedObjectScript.StartTouching(touchingObject);
 
                 OnControllerTouchInteractableObject(SetControllerInteractEvent(touchedObject));
             }
@@ -316,8 +320,10 @@ namespace VRTK
             if (touchedObject != null && (touchedObjectActiveColliders.Count == 0 || (!triggerIsColliding && !triggerWasColliding)))
             {
                 var touchedObjectScript = touchedObject.GetComponent<VRTK_InteractableObject>();
+                var touchingObject = gameObject;
+
                 //If it's being grabbed by the current touching object then it hasn't stopped being touched.
-                if (touchedObjectScript && touchedObjectScript.GetGrabbingObject() != gameObject)
+                if (touchedObjectScript && touchedObjectScript.GetGrabbingObject() != touchingObject)
                 {
                     StopTouching(touchedObject);
                 }
@@ -387,9 +393,10 @@ namespace VRTK
         {
             if (IsObjectInteractable(untouched))
             {
+                var touchingObject = gameObject;
                 var untouchedObjectScript = untouched.GetComponent<VRTK_InteractableObject>();
-                untouchedObjectScript.StopTouching(gameObject);
-                ResetButtonOverrides(untouchedObjectScript.IsGrabbed(gameObject), untouchedObjectScript.IsUsing(gameObject));
+                untouchedObjectScript.StopTouching(touchingObject);
+                ResetButtonOverrides(untouchedObjectScript.IsGrabbed(touchingObject), untouchedObjectScript.IsUsing(touchingObject));
                 if (!untouchedObjectScript.IsTouched())
                 {
                     untouchedObjectScript.ToggleHighlight(false);
@@ -397,7 +404,7 @@ namespace VRTK
             }
 
             ToggleControllerVisibility(true);
-            OnControllerUntouchInteractableObject(SetControllerInteractEvent(untouched.gameObject));
+            OnControllerUntouchInteractableObject(SetControllerInteractEvent(untouched));
             CleanupEndTouch();
         }
 
@@ -458,7 +465,7 @@ namespace VRTK
 
         private void CreateTouchRigidBody()
         {
-            touchRigidBody = gameObject.GetComponent<Rigidbody>();
+            touchRigidBody = GetComponent<Rigidbody>();
             if (touchRigidBody == null)
             {
                 touchRigidBody = gameObject.AddComponent<Rigidbody>();
